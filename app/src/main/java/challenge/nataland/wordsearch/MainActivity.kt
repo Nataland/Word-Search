@@ -1,39 +1,52 @@
 package challenge.nataland.wordsearch
 
 import android.os.Bundle
-import android.os.Handler
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.Gravity
+import android.view.View
 import android.widget.GridLayout
 import android.widget.GridLayout.FILL
 import android.widget.GridLayout.UNDEFINED
 import android.widget.TextView
+import com.groupon.grox.Store
+import com.groupon.grox.rxjava2.RxStores.states
+import com.jakewharton.rxbinding2.view.RxView.clicks
+import io.reactivex.android.schedulers.AndroidSchedulers.mainThread
+import io.reactivex.disposables.CompositeDisposable
 
 
 class MainActivity : AppCompatActivity() {
+
+    private val boardState = Store(BoardState())
+    private val compositeDisposable = CompositeDisposable()
+    private val words = listOf("Swift", "Kotlin", "ObjectiveC", "Variable", "Java", "Mobile").sortedByDescending { it.length }
+
+    private lateinit var board: GridLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val board = findViewById<GridLayout>(R.id.board)
-        val words = listOf("Swift", "Kotlin", "ObjectiveC", "Variable", "Java", "Mobile")
+        board = findViewById(R.id.board)
         val boardData = placeWords(words)
 
-        for (cell in boardData) {
+        compositeDisposable.add(states(boardState).observeOn(mainThread()).subscribe(this::updateUI, this::doLog))
+
+        for ((index, cell) in boardData.withIndex()) {
             board.addView(TextView(this).apply {
+                //todo: setTextSize
                 text = cell.content
-                setOnClickListener {
-                    setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.lightYellow))
-                    if (cell.fullWord == "") {
-                        val r = Runnable {
-                            setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.colorAccent))
-                        }
-                        val h = Handler()
-                        h.postDelayed(r, 800)
-                    }
-                }
+                compositeDisposable.add(
+                        clicks(this).subscribe {
+                            boardState.dispatch {
+                                oldState -> oldState.copy(
+                                    currentCell = cell,
+                                    currentCellPos = index
+                                )
+                            }
+                        })
                 setBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.colorAccent))
                 layoutParams = GridLayout.LayoutParams(
                         GridLayout.spec(UNDEFINED, FILL, 1.0F),
@@ -47,6 +60,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateUI(state: BoardState) {
+        if (state.currentCellPos != 0 && state.currentCell.fullWord.isNotEmpty()) {
+            setClickColour(board.getChildAt(state.currentCellPos))
+        }
+    }
+
+    private fun doLog(throwable: Throwable) {
+        Log.d("Grox", "An error occurred in a Grox chain.", throwable)
+    }
+
+    data class BoardState(
+            val currentCell: Cell = Cell(),
+            val currentCellPos: Int = 0,
+            val currentWord: String = "",
+            val currentWordCorrectCharPositions: List<Int> = emptyList(),
+            val wordsFound: List<String> = emptyList()
+    )
+
+    private fun setClickColour(view: View) = view.setBackgroundColor(ContextCompat.getColor(this, R.color.lightYellow))
+
+    private fun setCorrectColour(view: View) = view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimary))
 
     private fun placeWords(words: List<String>): List<Cell> {
         val board = MutableList(100) { Cell() }
@@ -76,5 +110,4 @@ class MainActivity : AppCompatActivity() {
         }
         return board
     }
-
 }
