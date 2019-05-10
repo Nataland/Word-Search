@@ -1,6 +1,7 @@
 package challenge.nataland.wordsearch
 
 import android.os.Bundle
+import android.os.Handler
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AppCompatActivity
@@ -19,26 +20,47 @@ import io.reactivex.android.schedulers.AndroidSchedulers.mainThread
 import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_main.*
 
-
 class MainActivity : AppCompatActivity() {
 
     private val boardState = Store(BoardState())
     private val compositeDisposable = CompositeDisposable()
     private val words = listOf("Swift", "Kotlin", "ObjectiveC", "Variable", "Java", "Mobile")
+    private val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        congrats_message.visibility = View.GONE
-        play_again_button.visibility = View.GONE
-
-        val boardData = placeWords(words)
+        hideSuccessMessage()
         compositeDisposable.add(states(boardState).observeOn(mainThread()).subscribe(this::updateUI, this::doLog))
+        setupBoard()
+    }
 
+    private fun setupBoard() {
+        checklist.removeAllViews()
+        for (word in words) {
+            checklist.addView(
+                    TextView(this).apply {
+                        text = word
+                        compoundDrawablePadding = resources.getDimension(R.dimen.drawable_padding).toInt()
+                        setCompoundDrawablesWithIntrinsicBounds(getDrawable(R.drawable.plain_box), null, null, null)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.white))
+                        layoutParams = GridLayout.LayoutParams(
+                                GridLayout.spec(UNDEFINED, FILL, 1.0F),
+                                GridLayout.spec(UNDEFINED, FILL, 1.0F)
+                        ).apply {
+                            gravity = Gravity.CENTER_VERTICAL
+                            width = 0
+                            height = 0
+                        }
+                    }
+            )
+        }
+
+        board.removeAllViews()
+        val boardData = placeWords(words)
         for ((index, cell) in boardData.withIndex()) {
             board.addView(TextView(this).apply {
-                text = cell.content
+                text = if (cell.content.isEmpty()) letters[(0 until letters.length).random()].toString() else cell.content
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.gothamssm_medium)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20F)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.white))
@@ -54,7 +76,9 @@ class MainActivity : AppCompatActivity() {
                         })
                 compositeDisposable.add(
                         clicks(play_again_button).subscribe {
-                            //todo: restart the game
+                            hideSuccessMessage()
+                            boardState.dispatch { BoardState() }
+                            setupBoard()
                         }
                 )
                 layoutParams = GridLayout.LayoutParams(
@@ -71,11 +95,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI(state: BoardState) {
+        if (state.wordsFound.size == words.size) {
+            showSuccessMessage(System.currentTimeMillis() - state.startTime)
+            return
+        }
+
+        if (state.startTime == 0L) {
+            boardState.dispatch { oldState -> oldState.copy(startTime = System.currentTimeMillis()) }
+        }
+
+        if (state.currentCellPos != -1 && state.currentCell.fullWord == "") {
+            board.getChildAt(state.currentCellPos).setHighlightColor(this)
+            setCellsBackToDefault(state)
+        }
+
         if (state.currentCellPos != -1
                 && state.currentCell.fullWord.isNotEmpty()
                 && !state.currentWordCorrectCharPositions.contains(state.currentCellPos)
                 && !state.wordsFound.contains(state.currentWord)
                 && !state.wordsFound.contains(state.currentCell.fullWord)) {
+
             board.getChildAt(state.currentCellPos).setHighlightColor(this)
 
             when {
@@ -95,23 +134,16 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 else -> {
-                    (state.currentWordCorrectCharPositions + state.currentCellPos).forEach {
-                        board.getChildAt(it).setDefaultColor(this)
-                    }
-
-                    boardState.dispatch { oldState ->
-                        oldState.copy(
-                                currentCell = Cell(),
-                                currentCellPos = -1,
-                                currentWord = "",
-                                currentWordCorrectCharPositions = emptyList()
-                        )
-                    }
+                    setCellsBackToDefault(state)
                 }
             }
         }
 
         if (state.currentWord.isNotEmpty() && state.currentWord.length == state.currentWordCorrectCharPositions.size) {
+            (checklist.getChildAt(words.indexOf(state.currentWord)) as TextView).setCompoundDrawablesWithIntrinsicBounds(
+                    getDrawable(R.drawable.checked_box), null, null, null
+            )
+
             state.currentWordCorrectCharPositions.forEach {
                 board.getChildAt(it).setCorrectColor(this)
             }
@@ -126,11 +158,37 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+    }
 
-        if (state.wordsFound.size == words.size) {
-            congrats_message.visibility = View.VISIBLE
-            play_again_button.visibility = View.VISIBLE
+    private fun setCellsBackToDefault(state: BoardState) {
+        val r = Runnable {
+            (state.currentWordCorrectCharPositions + state.currentCellPos).forEach {
+                board.getChildAt(it).setDefaultColor(this)
+            }
+            boardState.dispatch { oldState ->
+                oldState.copy(
+                        currentCell = Cell(),
+                        currentCellPos = -1,
+                        currentWord = "",
+                        currentWordCorrectCharPositions = emptyList()
+                )
+            }
         }
+        val h = Handler()
+        h.postDelayed(r, 100)
+    }
+
+    private fun showSuccessMessage(time: Long) {
+        congrats_message.text = String.format(resources.getString(R.string.game_complete_text), (time.toFloat() / 1000F))
+        congrats_message.visibility = View.VISIBLE
+        play_again_button.visibility = View.VISIBLE
+        checklist.visibility = View.GONE
+    }
+
+    private fun hideSuccessMessage() {
+        congrats_message.visibility = View.GONE
+        play_again_button.visibility = View.GONE
+        checklist.visibility = View.VISIBLE
     }
 
     private fun doLog(throwable: Throwable) {
@@ -164,5 +222,10 @@ class MainActivity : AppCompatActivity() {
             if (placedAWord) wordsPlaced++
         }
         return board
+    }
+
+    override fun onDestroy() {
+        compositeDisposable.dispose()
+        super.onDestroy()
     }
 }

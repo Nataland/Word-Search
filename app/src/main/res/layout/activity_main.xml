@@ -3,24 +3,37 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_gravity="center"
     android:background="@color/colorPrimaryDark"
-    android:padding="8dp"
-    android:layout_gravity="center">
+    android:padding="8dp">
+
+    <GridLayout
+        android:id="@+id/checklist"
+        android:useDefaultMargins="true"
+        android:layout_width="0dp"
+        android:columnCount="2"
+        android:layout_margin="8dp"
+        app:layout_constraintBottom_toTopOf="@id/board"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_height="0dp">
+
+    </GridLayout>
 
     <TextView
-        android:layout_width="0dp"
         android:id="@+id/congrats_message"
-        android:text="@string/game_complete_text"
-        app:layout_constraintLeft_toLeftOf="parent"
-        android:textColor="@color/white"
-        android:textSize="20sp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginHorizontal="32dp"
         android:gravity="center"
+        android:textColor="@color/white"
+        android:textSize="20sp"
         android:visibility="gone"
-        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintBottom_toTopOf="@id/board"
-        app:layout_constraintTop_toTopOf="parent"
-        android:layout_height="wrap_content" />
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <GridLayout
         android:id="@+id/board"
@@ -29,24 +42,25 @@
         android:columnCount="10"
         android:orientation="horizontal"
         android:rowCount="10"
+        app:layout_constraintBottom_toTopOf="@id/play_again_button"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/congrats_message"
-        app:layout_constraintBottom_toTopOf="@id/play_again_button"/>
+        app:layout_constraintTop_toBottomOf="@id/congrats_message" />
 
     <Button
-        android:layout_width="wrap_content"
         android:id="@+id/play_again_button"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/white"
+        android:background="@drawable/green_button_background"
+        android:padding="16dp"
         android:stateListAnimator="@null"
         android:text="@string/play_again"
-        android:padding="16dp"
-        android:background="@drawable/green_button_background"
+        android:textColor="@color/white"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/board" />
 
 </android.support.constraint.ConstraintLayout>
