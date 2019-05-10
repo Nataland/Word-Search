@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Word Search</string>
+    <string name="game_complete_text">Congrats, you found all the hidden words!</string>
+    <string name="play_again">Play again</string>
 </resources>

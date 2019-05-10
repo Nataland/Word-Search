@@ -3,7 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark"
+    android:padding="8dp"
     android:layout_gravity="center">
+
+    <TextView
+        android:layout_width="0dp"
+        android:id="@+id/congrats_message"
+        android:text="@string/game_complete_text"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:textColor="@color/white"
+        android:textSize="20sp"
+        android:layout_marginHorizontal="32dp"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/board"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_height="wrap_content" />
 
     <GridLayout
         android:id="@+id/board"
@@ -12,11 +29,24 @@
         android:columnCount="10"
         android:orientation="horizontal"
         android:rowCount="10"
-        android:useDefaultMargins="true"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintTop_toBottomOf="@id/congrats_message"
+        app:layout_constraintBottom_toTopOf="@id/play_again_button"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:id="@+id/play_again_button"
+        android:layout_height="wrap_content"
+        android:textColor="@color/white"
+        android:stateListAnimator="@null"
+        android:text="@string/play_again"
+        android:padding="16dp"
+        android:background="@drawable/green_button_background"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/board" />
 
 </android.support.constraint.ConstraintLayout>
