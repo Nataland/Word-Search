@@ -1,6 +1,5 @@
 package challenge.nataland.wordsearch
 
-import android.opengl.Visibility
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
@@ -9,7 +8,6 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.widget.Button
 import android.widget.GridLayout
 import android.widget.GridLayout.FILL
 import android.widget.GridLayout.UNDEFINED
@@ -28,7 +26,6 @@ class MainActivity : AppCompatActivity() {
     private val compositeDisposable = CompositeDisposable()
     private val words = listOf("Swift", "Kotlin", "ObjectiveC", "Variable", "Java", "Mobile")
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -45,6 +42,7 @@ class MainActivity : AppCompatActivity() {
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.gothamssm_medium)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20F)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.white))
+                setDefaultColor(this@MainActivity)
                 compositeDisposable.add(
                         clicks(this).subscribe {
                             boardState.dispatch { oldState ->
@@ -59,7 +57,6 @@ class MainActivity : AppCompatActivity() {
                             //todo: restart the game
                         }
                 )
-                setDefaultColor(this)
                 layoutParams = GridLayout.LayoutParams(
                         GridLayout.spec(UNDEFINED, FILL, 1.0F),
                         GridLayout.spec(UNDEFINED, FILL, 1.0F)
@@ -79,10 +76,10 @@ class MainActivity : AppCompatActivity() {
                 && !state.currentWordCorrectCharPositions.contains(state.currentCellPos)
                 && !state.wordsFound.contains(state.currentWord)
                 && !state.wordsFound.contains(state.currentCell.fullWord)) {
-            setHighlightColor(board.getChildAt(state.currentCellPos))
+            board.getChildAt(state.currentCellPos).setHighlightColor(this)
 
-            if (state.currentWord.isEmpty()) {
-                boardState.dispatch { oldState ->
+            when {
+                state.currentWord.isEmpty() -> boardState.dispatch { oldState ->
                     oldState.copy(
                             currentCell = Cell(),
                             currentCellPos = -1,
@@ -90,33 +87,33 @@ class MainActivity : AppCompatActivity() {
                             currentWord = oldState.currentCell.fullWord
                     )
                 }
-            } else if (state.currentWord == state.currentCell.fullWord) {
-                boardState.dispatch { oldState ->
+                state.currentWord == state.currentCell.fullWord -> boardState.dispatch { oldState ->
                     oldState.copy(
                             currentCell = Cell(),
                             currentCellPos = -1,
                             currentWordCorrectCharPositions = oldState.currentWordCorrectCharPositions + oldState.currentCellPos
                     )
                 }
-            } else {
-                (state.currentWordCorrectCharPositions + state.currentCellPos).forEach {
-                    setDefaultColor(board.getChildAt(it))
-                }
+                else -> {
+                    (state.currentWordCorrectCharPositions + state.currentCellPos).forEach {
+                        board.getChildAt(it).setDefaultColor(this)
+                    }
 
-                boardState.dispatch { oldState ->
-                    oldState.copy(
-                            currentCell = Cell(),
-                            currentCellPos = -1,
-                            currentWord = "",
-                            currentWordCorrectCharPositions = emptyList()
-                    )
+                    boardState.dispatch { oldState ->
+                        oldState.copy(
+                                currentCell = Cell(),
+                                currentCellPos = -1,
+                                currentWord = "",
+                                currentWordCorrectCharPositions = emptyList()
+                        )
+                    }
                 }
             }
         }
 
         if (state.currentWord.isNotEmpty() && state.currentWord.length == state.currentWordCorrectCharPositions.size) {
             state.currentWordCorrectCharPositions.forEach {
-                setCorrectColor(board.getChildAt(it))
+                board.getChildAt(it).setCorrectColor(this)
             }
 
             boardState.dispatch { oldState ->
@@ -139,20 +136,6 @@ class MainActivity : AppCompatActivity() {
     private fun doLog(throwable: Throwable) {
         Log.d("Grox", "An error occurred in a Grox chain.", throwable)
     }
-
-    data class BoardState(
-            val currentCell: Cell = Cell(),
-            val currentCellPos: Int = 0,
-            val currentWord: String = "",
-            val currentWordCorrectCharPositions: List<Int> = emptyList(),
-            val wordsFound: List<String> = emptyList()
-    )
-
-    private fun setDefaultColor(view: View) = view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimary))
-
-    private fun setHighlightColor(view: View) = view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimaryDark))
-
-    private fun setCorrectColor(view: View) = view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorAccent))
 
     private fun placeWords(words: List<String>): List<Cell> {
         val board = MutableList(100) { Cell() }
