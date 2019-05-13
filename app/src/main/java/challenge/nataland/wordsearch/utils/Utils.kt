@@ -1,8 +1,9 @@
-package challenge.nataland.wordsearch
+package challenge.nataland.wordsearch.utils
 
 import android.content.Context
 import android.support.v4.content.ContextCompat
 import android.view.View
+import challenge.nataland.wordsearch.R
 import java.util.*
 
 fun IntRange.random() =
