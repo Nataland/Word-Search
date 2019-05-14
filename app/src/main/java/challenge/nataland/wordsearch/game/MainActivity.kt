@@ -14,7 +14,7 @@ import android.widget.GridLayout
 import android.widget.GridLayout.FILL
 import android.widget.GridLayout.UNDEFINED
 import android.widget.TextView
-import challenge.nataland.wordsearch.*
+import challenge.nataland.wordsearch.R
 import challenge.nataland.wordsearch.app.MyApplication
 import challenge.nataland.wordsearch.board.BoardState
 import challenge.nataland.wordsearch.board.Cell
