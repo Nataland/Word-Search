@@ -1,7 +1,7 @@
 package challenge.nataland.wordsearch.board
 
 data class BoardState(
-        val currentCell: Cell = Cell(),
+        val lastCellPos: Int = -1,
         val currentCellPos: Int = -1,
         val currentWord: String = "",
         val currentWordCorrectCharPositions: List<Int> = emptyList(),

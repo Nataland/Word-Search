@@ -8,6 +8,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.GridLayout
 import android.widget.GridLayout.FILL
@@ -25,6 +26,7 @@ import challenge.nataland.wordsearch.utils.setHighlightColor
 import com.groupon.grox.Store
 import com.groupon.grox.rxjava2.RxStores.states
 import com.jakewharton.rxbinding2.view.RxView.clicks
+import com.jakewharton.rxbinding2.view.RxView.touches
 import dagger.Component
 import dagger.Module
 import dagger.Provides
@@ -41,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     lateinit var myExample: Store<BoardState>
 
     private val compositeDisposable = CompositeDisposable()
+
     private val words = listOf("Swift", "Kotlin", "ObjectiveC", "Variable", "Java", "Mobile")
     private val letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -91,28 +94,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupBoard(state: BoardState) {
         if (board.childCount != 100) {
-            for ((index, cell) in state.board.withIndex()) {
+            for (cell in state.board) {
                 board.addView(TextView(this).apply {
                     text = if (cell.content.isEmpty()) letters[(0 until letters.length).random()].toString() else cell.content
                     typeface = ResourcesCompat.getFont(this@MainActivity, R.font.gothamssm_medium)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 20F)
                     setTextColor(ContextCompat.getColor(this@MainActivity, R.color.white))
 
-                    compositeDisposable.add(
-                            clicks(this).subscribe {
-                                myExample.dispatch { oldState ->
-                                    oldState.copy(
-                                            currentCell = cell,
-                                            currentCellPos = index
-                                    )
-                                }
-                            })
-                    compositeDisposable.add(
-                            clicks(play_again_button).subscribe {
-                                hideSuccessMessage()
-                                myExample.dispatch { BoardState() }
-                            }
-                    )
                     layoutParams = GridLayout.LayoutParams(
                             GridLayout.spec(UNDEFINED, FILL, 1.0F),
                             GridLayout.spec(UNDEFINED, FILL, 1.0F)
@@ -124,6 +112,21 @@ class MainActivity : AppCompatActivity() {
                     }
                 })
             }
+
+            compositeDisposable.add(
+                    clicks(play_again_button).subscribe {
+                        hideSuccessMessage()
+                        myExample.dispatch { BoardState() }
+                    }
+            )
+
+            compositeDisposable.add(touches(board)
+                    .map { event -> getCell(event) }
+                    .distinctUntilChanged()
+                    .subscribe { myExample.dispatch {
+                        oldState -> oldState.copy(currentCellPos = it)
+                    } }
+            )
         }
 
         for (index in 0 until board.childCount) {
@@ -145,14 +148,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI(state: BoardState) {
-        setupBoard(state)
-        setupChecklist(state)
-        setupSuccessMessage(state)
-
-        if (state.finishTime == 0L && state.wordsFound.size == words.size) {
-            myExample.dispatch { oldState -> oldState.copy(finishTime = System.currentTimeMillis()) }
-        }
-
         if (state.startTime == 0L) {
             board.removeAllViews()
             checklist.removeAllViews()
@@ -165,37 +160,45 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        if (state.currentCellPos != -1 && state.currentCell.fullWord == "") {
+        setupBoard(state)
+        setupChecklist(state)
+        setupSuccessMessage(state)
+
+        if (state.finishTime == 0L && state.wordsFound.size == words.size) {
+            myExample.dispatch { oldState -> oldState.copy(finishTime = System.currentTimeMillis()) }
+        }
+
+        if (state.currentCellPos != -1 && state.board[state.currentCellPos].fullWord == "") {
             board.getChildAt(state.currentCellPos).setHighlightColor(this)
             setCellsBackToDefault(state)
         }
 
         if (state.currentCellPos != -1
-                && state.currentCell.fullWord.isNotEmpty()
+                && state.board[state.currentCellPos].fullWord.isNotEmpty()
                 && !state.currentWordCorrectCharPositions.contains(state.currentCellPos)
                 && !state.wordsFound.contains(state.currentWord)
-                && !state.wordsFound.contains(state.currentCell.fullWord)) {
+                && !state.wordsFound.contains(state.board[state.currentCellPos].fullWord)) {
 
             board.getChildAt(state.currentCellPos).setHighlightColor(this)
 
             when {
                 state.currentWord.isEmpty() -> myExample.dispatch { oldState ->
                     oldState.copy(
-                            currentCell = Cell(),
+                            currentWordCorrectCharPositions = state.currentWordCorrectCharPositions + state.currentCellPos,
+                            currentWord = state.board[state.currentCellPos].fullWord,
                             currentCellPos = -1,
-                            currentWordCorrectCharPositions = oldState.currentWordCorrectCharPositions + oldState.currentCellPos,
-                            currentWord = oldState.currentCell.fullWord
+                            lastCellPos = state.currentCellPos
                     )
                 }
-                state.currentWord == state.currentCell.fullWord -> myExample.dispatch { oldState ->
+                state.currentWord == state.board[state.currentCellPos].fullWord -> myExample.dispatch { oldState ->
                     oldState.copy(
-                            currentCell = Cell(),
                             currentCellPos = -1,
-                            currentWordCorrectCharPositions = oldState.currentWordCorrectCharPositions + oldState.currentCellPos
+                            lastCellPos = state.currentCellPos,
+                            currentWordCorrectCharPositions = state.currentWordCorrectCharPositions + state.currentCellPos
                     )
                 }
                 else -> {
-                    setCellsBackToDefault(state)
+                    setCellsBackToDefaultFromCorrectWord(state)
                 }
             }
         }
@@ -203,12 +206,12 @@ class MainActivity : AppCompatActivity() {
         if (state.currentWord.isNotEmpty() && state.currentWord.length == state.currentWordCorrectCharPositions.size) {
             myExample.dispatch { oldState ->
                 oldState.copy(
-                        currentCell = Cell(),
                         currentCellPos = -1,
+                        lastCellPos = state.currentCellPos,
                         currentWord = "",
-                        allCorrectCharPositions = oldState.allCorrectCharPositions + oldState.currentWordCorrectCharPositions,
+                        allCorrectCharPositions = state.allCorrectCharPositions + state.currentWordCorrectCharPositions,
                         currentWordCorrectCharPositions = emptyList(),
-                        wordsFound = oldState.wordsFound + oldState.currentWord
+                        wordsFound = state.wordsFound + state.currentWord
                 )
             }
         }
@@ -221,7 +224,25 @@ class MainActivity : AppCompatActivity() {
             }
             myExample.dispatch { oldState ->
                 oldState.copy(
-                        currentCell = Cell(),
+                        lastCellPos = state.currentCellPos,
+                        currentCellPos = -1,
+                        currentWord = "",
+                        currentWordCorrectCharPositions = emptyList()
+                )
+            }
+        }
+        val h = Handler()
+        h.postDelayed(r, 100)
+    }
+
+    private fun setCellsBackToDefaultFromCorrectWord(state: BoardState) {
+        val r = Runnable {
+            (state.currentWordCorrectCharPositions + state.currentCellPos).forEach {
+                board.getChildAt(it).setDefaultColor(this)
+            }
+            myExample.dispatch { oldState ->
+                oldState.copy(
+                        lastCellPos = state.currentCellPos,
                         currentCellPos = -1,
                         currentWord = "",
                         currentWordCorrectCharPositions = emptyList()
@@ -243,6 +264,19 @@ class MainActivity : AppCompatActivity() {
         congrats_message.visibility = View.GONE
         play_again_button.visibility = View.GONE
         checklist.visibility = View.VISIBLE
+    }
+
+    private fun getCell(event: MotionEvent) : Int {
+        for (index in 0 until board.childCount) {
+            val cell = board.getChildAt(index)
+            if (event.x <= cell.right
+                    && event.x >= cell.left
+                    && event.y >= cell.top
+                    && event.y <= cell.bottom) {
+                return index
+            }
+        }
+        return -1
     }
 
     private fun doLog(throwable: Throwable) {

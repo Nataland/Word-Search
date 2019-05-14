@@ -1,7 +1,7 @@
 package challenge.nataland.wordsearch.app
 
 import android.app.Application
-import challenge.nataland.wordsearch.DaggerMyComponent
+import challenge.nataland.wordsearch.game.DaggerMyComponent
 import challenge.nataland.wordsearch.game.MyComponent
 import challenge.nataland.wordsearch.game.MyModule
 
