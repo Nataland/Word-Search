@@ -1,21 +1,21 @@
 package challenge.nataland.wordsearch.app
 
 import android.app.Application
-import challenge.nataland.wordsearch.game.DaggerMyComponent
-import challenge.nataland.wordsearch.game.MyComponent
-import challenge.nataland.wordsearch.game.MyModule
+import challenge.nataland.wordsearch.game.DaggerGameComponent
+import challenge.nataland.wordsearch.game.GameComponent
+import challenge.nataland.wordsearch.game.GameModule
 
 class MyApplication : Application() {
-    lateinit var myComponent: MyComponent
+    lateinit var myComponent: GameComponent
 
     override fun onCreate() {
         super.onCreate()
-        myComponent = createMyComponent()
+        myComponent = createGameComponent()
     }
 
-    private fun createMyComponent(): MyComponent {
-        return DaggerMyComponent.builder()
-                .myModule(MyModule())
+    private fun createGameComponent(): GameComponent {
+        return DaggerGameComponent.builder()
+                .gameModule(GameModule())
                 .build()
     }
 

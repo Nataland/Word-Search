@@ -6,8 +6,7 @@ import android.view.View
 import challenge.nataland.wordsearch.R
 import java.util.*
 
-fun IntRange.random() =
-        Random().nextInt((endInclusive + 1) - start) + start
+fun IntRange.random() = Random().nextInt((endInclusive + 1) - start) + start
 
 fun View.setDefaultColor(context: Context) = setBackgroundColor(ContextCompat.getColor(context, R.color.colorPrimary))
 
