@@ -18,5 +18,4 @@ class MyApplication : Application() {
                 .gameModule(GameModule())
                 .build()
     }
-
 }

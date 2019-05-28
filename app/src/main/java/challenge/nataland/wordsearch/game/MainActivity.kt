@@ -64,6 +64,11 @@ class MainActivity : AppCompatActivity() {
         board.rowCount = GRID_SIZE
     }
 
+    override fun onDestroy() {
+        compositeDisposable.dispose()
+        super.onDestroy()
+    }
+
     private fun updateUI(state: BoardState) {
         if (state.startTime == 0L) {
             board.removeAllViews()
@@ -231,12 +236,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun doLog(throwable: Throwable) {
         Log.d("Grox", "An error occurred in a Grox chain.", throwable)
-    }
-
-
-    override fun onDestroy() {
-        compositeDisposable.dispose()
-        super.onDestroy()
     }
 }
 
